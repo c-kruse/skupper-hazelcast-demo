@@ -45,7 +45,7 @@ spec:
     targetPort: 5701
 ---
 apiVersion: apps/v1
-kind: StatefulSet
+kind: Deployment
 metadata:
   name: hazelcast
 spec:
@@ -53,7 +53,6 @@ spec:
   selector:
     matchLabels:
       app: hazelcast
-  serviceName: hazelcast
   template:
     metadata:
       labels:
@@ -74,9 +73,6 @@ spec:
         volumeMounts:
         - name: hazelcast-config-volume
           mountPath: /data/hazelcast
-      dnsConfig:
-        searches:
-          - hazelcast.MY_NAMESPACE.svc.cluster.local
       volumes:
       - name: hazelcast-config-volume
         configMap:

@@ -19,21 +19,17 @@ Adds the following resources to the namespace:
 
 **Using the Hazelcast Cluster Kubernetes Cluster**
 ```
-NAMESPACE=$(kubectl config view --output 'jsonpath={..namespace}')
-sed "s/MY_NAMESPACE/$NAMESPACE/" cluster.yaml | kubectl apply -f -
+kubectl apply -f cluster.yaml
 ```
 
 Adds the following resources to the namespace:
 * Skupper Site
 * Skupper Connector for the hazelcast statefulset with **exposePodsByName** enabled.
-* Hazelcast cluster StatefulSet with a special configuration to enable
+* Hazelcast cluster Deployment with a special configuration to enable
   discovery and addressing that works across networks.
   * Sets `hazelcast.network.public-address` explicitly to the name of the pod/hostname.
   * Uses standard kuberentes service based DNS discovery.
-  * Adjusted pod dnsConfig to resolve peer members though k8s pod networking
-    using the statefulSet Serivce **hack**. Allows pods to resolve
-    "hazelcast-0" to "hazelcast-0.hazelcast.<my-namespace>.svc.cluster.local"
-* Headless service for statefulset
+* Headless service for cluster discovery through kubernetes pod network
 
 # Linking the sites
 
@@ -67,25 +63,16 @@ rollout restart deployment/hazelcast-mancenter).
 
 # Limitations
 
-* Requires a StatefulSet.
-
-Hazelcast discovery works by sharing cluster member's "public-address". By
-default, this will be the pod bind address - an IP in the kube pod network.
-When using skupper to access the hazelcast cluster members without sharing a
-pod network, we need a to use a different addressing scheme. This method uses
-the cluster member's pod name. On the Listener-side over the **skupper**
-network this just magically works out with the exposePodsByName option, but to
-make this work over the **pod network** we rely on a trick - using a
-StatefulSet and service so that k8s will provision DNS records for each pod
-under <podname>.<servicename>.<namespace>.svc.cluster.local.
-
-An alternative is to simply disable "smart routing" on the client side, and to
-not set exposePodsByName. In this configuration, the Hazelcast cluster members
-can use their default behaviour to resolve each other over the kube pod
-network, and the client will allow skupper to simply loadbalance connections to
-any cluster members (called unisocket client connections in hazelcast.)
-
-* Only accommodates a client/server model.
+* Hazelcast cluster Members are limited to a single namespace.
 
 Does not work for extending a hazelcast cluster across sites. It is unclear if
-this is desirable, hazelcast documentation seems to suggest it may not be idea.
+this is desirable, hazelcast documentation seems to suggest it may not be
+ideal.
+
+The limitation here is on the discovery side, where hazelcast expects to be
+able to discover the addresses of all cluster members through a DNS query to a
+headless service when establishing the cluster. From the client side, it is
+enough to be load balanced to one member of an established cluster to discover
+the addresses of the other members. Skupper 2.0 does not support the management
+of such headless services, and it is unclear how a skupper 1.x version that
+does support headless services could have been used to make this work.
