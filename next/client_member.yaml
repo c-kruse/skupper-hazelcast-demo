@@ -1,26 +1,30 @@
 ---
 apiVersion: skupper.io/v2alpha1
-kind: Site
-metadata:
-  name: c01
-spec:
-  linkAccess: default
----
-apiVersion: skupper.io/v2alpha1
 kind: Connector
 metadata:
-  name: hazelcast
+  name: hcext
 spec:
   exposePodsByName: true
   port: 5701
-  routingKey: hazelcast
-  selector: app=hazelcast
+  routingKey: hazelcast-ext
+  selector: app=hcext
+  type: tcp
+---
+apiVersion: skupper.io/v2alpha1
+kind: Listener
+metadata:
+  name: hz-client-members
+spec:
+  exposePodsByName: true
+  host: hz-client-members
+  routingKey: hazelcast-ext
+  port: 5701
   type: tcp
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: hazelcast-config
+  name: hcext-config
 data:
   hazelcast.yaml: |-
     hazelcast:
@@ -34,10 +38,10 @@ data:
 apiVersion: v1
 kind: Service
 metadata:
-  name: hazelcast
+  name: hcext
 spec:
   selector:
-    app: hazelcast
+    app: hcext
   clusterIP: None
   ports:
   - name: hazelcast
@@ -47,16 +51,16 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: hazelcast
+  name: hcext
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
-      app: hazelcast
+      app: hcext
   template:
     metadata:
       labels:
-        app: hazelcast
+        app: hcext
     spec:
       containers:
       - name: hazelcast
@@ -76,4 +80,4 @@ spec:
       volumes:
       - name: hazelcast-config-volume
         configMap:
-          name: hazelcast-config
+          name: hcext-config

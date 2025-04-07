@@ -76,3 +76,35 @@ enough to be load balanced to one member of an established cluster to discover
 the addresses of the other members. Skupper 2.0 does not support the management
 of such headless services, and it is unclear how a skupper 1.x version that
 does support headless services could have been used to make this work.
+
+
+# Next Steps
+
+Look in to exposing members across multiple sites.
+
+**Using the Client Kubernetes Cluster**
+```
+kubectl apply -f ./next/client_member.yaml
+```
+
+Adds the following resources to the namespace:
+* One hazelcast cluster member deployment
+  * uses hostname as public address
+  * discovers other cluster members through "hazelcast" service.
+* A skupper connector targeting the member deployment with a new routing key.
+* A skupper listener for the new listener. *probably lazy* This allows the
+  client in this site to resolve the new cluster member deployment pods by
+  their public address via the skupper instead of using pod networking. Would
+  probably be more efficient to skip skupper for this leg, but would probably
+  require some tomfoolery with statefulsets, headless services and pod
+  dnsconfig.
+
+**Using the Hazelcast Cluster Kubernetes Cluster**
+```
+kubectl apply -f ./next/cluster_client.yaml
+```
+
+Adds a client to the cluster side - mainly for illustrative purposes:
+* Hazelcast management center deployment with with a client configuration using
+  standard kubernetes dns-based service discovery - discovery still points at "hazelcast" service.
+* A skupper listener for each of the member workloads so that the client can resolve the member addresses.
