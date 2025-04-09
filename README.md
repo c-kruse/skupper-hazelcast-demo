@@ -82,6 +82,15 @@ does support headless services could have been used to make this work.
 
 Look in to exposing members across multiple sites.
 
+**WARNING** - This section makes use of a pattern where a Listener+Connector
+pair (by routingKey) are placed in the same site. A [bug] in the skupper
+controller makes this unstable. It is probably not an excellent pattern to use
+regardless (routes local-bound traffic through extra hops through the skupper
+router.)
+
+
+[bug]: https://github.com/skupperproject/skupper/issues/2058
+
 **Using the Client Kubernetes Cluster**
 ```
 kubectl apply -f ./next/client_member.yaml
