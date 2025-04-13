@@ -1,0 +1,200 @@
+---
+apiVersion: skupper.io/v2alpha1
+kind: Site
+metadata:
+  name: boston-us
+spec:
+  linkAccess: default
+---
+apiVersion: skupper.io/v2alpha1
+kind: Connector
+metadata:
+  name: hazelcast
+spec:
+  exposePodsByName: true
+  port: 5701
+  routingKey: hazelcast-boston-us
+  selector: app=hazelcast
+  type: tcp
+---
+apiVersion: skupper.io/v2alpha1
+kind: Listener
+metadata:
+  name: hazelcast-madrid
+spec:
+  exposePodsByName: true
+  host: hazelcast-madrid-es
+  port: 5701
+  routingKey: hazelcast-madrid-es
+  type: tcp
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hazelcast-config
+data:
+  hazelcast.yaml: |-
+    hazelcast:
+      network:
+        public-address: ${advertiseName}
+        join:
+          kubernetes:
+            enabled: true
+            service-label-name: hazelcast-cluster-member
+            service-label-value: mycluster
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hazelcast
+  labels:
+    hazelcast-cluster-member: mycluster
+spec:
+  selector:
+    app: hazelcast
+  ports:
+  - name: hazelcast
+    port: 5701
+    targetPort: 5701
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: hazelcast
+  labels:
+    app: hazelcast
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: hazelcast
+  labels:
+    app: hazelcast
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  - pods
+  - nodes
+  - services
+  verbs:
+  - get
+  - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: hazelcast
+  labels:
+    app: hazelcast
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: hazelcast
+subjects:
+- kind: ServiceAccount
+  name: hazelcast
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: hazelcast-boston
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: hazelcast
+  template:
+    metadata:
+      labels:
+        app: hazelcast
+    spec:
+      containers:
+      - name: hazelcast
+        image: "hazelcast/hazelcast:5.5.0"
+        ports:
+        - containerPort: 5701
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: JAVA_OPTS
+          value: "-Dhazelcast.config=/data/hazelcast/hazelcast.yaml -DadvertiseName=$(POD_NAME)"
+        volumeMounts:
+        - name: hazelcast-config-volume
+          mountPath: /data/hazelcast
+      serviceAccountName: hazelcast
+      automountServiceAccountToken: true
+      volumes:
+      - name: hazelcast-config-volume
+        configMap:
+          name: hazelcast-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hack-00
+  labels:
+    skupper.io/label-template: "true"
+    hazelcast-cluster-member: mycluster
+data:
+  kind: Service
+  name: hazelcast-madrid-0
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hack-01
+  labels:
+    skupper.io/label-template: "true"
+    hazelcast-cluster-member: mycluster
+data:
+  kind: Service
+  name: hazelcast-madrid-1
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hack-02
+  labels:
+    skupper.io/label-template: "true"
+    hazelcast-cluster-member: mycluster
+data:
+  kind: Service
+  name: hazelcast-madrid-2
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hack-03
+  labels:
+    skupper.io/label-template: "true"
+    hazelcast-cluster-member: mycluster
+data:
+  kind: Service
+  name: hazelcast-madrid-3
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hack-04
+  labels:
+    skupper.io/label-template: "true"
+    hazelcast-cluster-member: mycluster
+data:
+  kind: Service
+  name: hazelcast-madrid-4
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hack-05
+  labels:
+    skupper.io/label-template: "true"
+    hazelcast-cluster-member: mycluster
+data:
+  kind: Service
+  name: hazelcast-madrid-5
